@@ -1,12 +1,16 @@
 import {
   REGION_DATASETS,
   SMIAN_P5_VERIFIED_RECORDS,
+  type LiveDiskSlice,
 } from '../data/samples/asfVertexSamples.ts';
+
+export type { LiveDiskSlice };
 import type {
   AsfGranuleMetadata,
   AsfGranulesApiResponse,
   EonetEvent,
   HealthStatusResponse,
+  HistoricalIssueEntry,
   NasaPowerApiResponse,
   PageAwareAssistRequest,
   PageAwareAssistResponse,
@@ -17,13 +21,15 @@ import type {
   SavedSnapshot,
   SynthesizeRequestPayload,
 } from '../types/sar.ts';
+
+export type { HistoricalIssueEntry };
 import { buildDeterministicSynthesis } from '../utils/sarPhysics.ts';
 import { buildPageAwareAssistantFallback } from '../utils/globeMath.ts';
 
 const SNAPSHOTS_STORAGE_KEY = 'nisar_pulse_saved_snapshots_v1';
 export const LAPTOP_DB_URL_STORAGE_KEY = 'nisar_laptop_db_url';
 export const LAPTOP_DB_URL =
-  'https://americans-revolution-nicole-meanwhile.trycloudflare.com';
+  'https://burlington-wayne-concrete-aid.trycloudflare.com';
 export const DEFAULT_LAPTOP_DB_URL = LAPTOP_DB_URL;
 export const LAPTOP_DB_EVENT_NAME = 'nisar-laptop-db-changed';
 
@@ -58,6 +64,10 @@ export interface LiveLaptopGranuleRecord {
   soilMoistureIndex?: number;
   losDisplacementCm?: number;
   coherenceMean?: number;
+  plainEnglishSummary?: string;
+  liveDiskSlices?: LiveDiskSlice[];
+  recurringProblemsSummary?: string;
+  historicalIssues?: HistoricalIssueEntry[];
 }
 
 export interface LiveLaptopH5DbResponse {
@@ -220,6 +230,50 @@ function parseLiveLaptopPayload(
           typeof g.coherenceMean === 'number'
             ? g.coherenceMean
             : verifiedMatch?.coherenceMean,
+        plainEnglishSummary:
+          typeof g.plainEnglishSummary === 'string' &&
+          g.plainEnglishSummary.trim().length > 0
+            ? g.plainEnglishSummary.trim()
+            : verifiedMatch?.plainEnglishSummary,
+        liveDiskSlices:
+          Array.isArray(g.liveDiskSlices) && g.liveDiskSlices.length > 0
+            ? g.liveDiskSlices
+                .filter(
+                  (slice): slice is LiveDiskSlice =>
+                    Boolean(slice) &&
+                    typeof slice === 'object' &&
+                    typeof slice.chunkSha256 === 'string'
+                )
+                .map((slice) => ({
+                  offsetMB: Number(slice.offsetMB ?? 0),
+                  nonZeroByteRatio: Number(slice.nonZeroByteRatio ?? 0),
+                  chunkSha256: String(slice.chunkSha256),
+                }))
+            : verifiedMatch?.liveDiskSlices,
+        recurringProblemsSummary:
+          typeof g.recurringProblemsSummary === 'string' &&
+          g.recurringProblemsSummary.trim().length > 0
+            ? g.recurringProblemsSummary.trim()
+            : verifiedMatch?.recurringProblemsSummary,
+        historicalIssues:
+          Array.isArray(g.historicalIssues) && g.historicalIssues.length > 0
+            ? g.historicalIssues
+                .filter(
+                  (issue): issue is HistoricalIssueEntry =>
+                    Boolean(issue) &&
+                    typeof issue === 'object' &&
+                    typeof issue.eventTitle === 'string'
+                )
+                .map((issue) => ({
+                  year: String(issue.year ?? ''),
+                  eventTitle: String(issue.eventTitle ?? ''),
+                  whatHappened: String(issue.whatHappened ?? ''),
+                  radarSignatureComparison: String(
+                    issue.radarSignatureComparison ?? ''
+                  ),
+                  communityImpact: String(issue.communityImpact ?? ''),
+                }))
+            : verifiedMatch?.historicalIssues,
       };
     });
 
