@@ -34,7 +34,7 @@ import { buildPageAwareAssistantFallback } from '../utils/globeMath.ts';
 
 const SNAPSHOTS_STORAGE_KEY = 'nisar_pulse_saved_snapshots_v1';
 export const LAPTOP_DB_URL_STORAGE_KEY = 'nisar_laptop_db_url';
-export const LAPTOP_DB_URL = '';
+export const LAPTOP_DB_URL = 'https://abu-way-hiv-cad.trycloudflare.com';
 export const DEFAULT_LAPTOP_DB_URL = '';
 export const LAPTOP_DB_EVENT_NAME = 'nisar-laptop-db-changed';
 
