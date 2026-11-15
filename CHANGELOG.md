@@ -55,3 +55,37 @@
 ### Fixed
 - **Defensive Laptop `.h5` Granule Parsing (`src/services/nisarApi.ts`, `src/components/GranuleInspector.tsx`)**: Added safe defaults for `parsedGranule` fields returned by `scripts/extract_nisar_h5.py` when filenames omit standard tokens.
 - **Verified `SMIAN_P5` Telemetry Synchronization (`src/data/samples/asfVertexSamples.ts`, `src/services/nisarApi.ts`, `src/components/GranuleInspector.tsx`)**: Exported `LAPTOP_DB_URL` (`https://americans-revolution-nicole-meanwhile.trycloudflare.com`), added automatic startup `/api/local-h5` fetch with deduplicated merging into active region granules, and synced hardcoded verified `SMIAN_P5` file sizes, SHA-256 digests, and HH/HV/soil-moisture/LOS/coherence metrics across Japan (`5132.0 MB`, `0090bc4d60a3e529`), Maharashtra (`6388.0 MB`, `f6066c14dd4b68bb`), and Northeast India (`6516.0 MB`, `0ef3bd2a7b09daa8`).
+
+## [0.3.2] - 2026-11-14 — Plain-English .h5 File Translator & AI Guide Bridge
+### Added
+- **Plain-English `.h5` File Translator (`src/components/GranuleInspector.tsx`, `scripts/extract_nisar_h5.py`)**: Added everyday explanations of NASA `.h5` containers, flat-mirror `HH` flood detection, leaf-bounce `HV` crop/forest thickness, percentage Soil Wetness bars, earthquake ground-shift translations, and 3-line HDF5 Path Decoders (`HHHH`, `HVHV`, `boundingPolygon`).
+- **One-Click AI `.h5` Explanation Bridge (`src/components/GranuleInspector.tsx` ↔ `src/components/PageAwareAssistant.tsx`)**: Added `✨ Ask AI to Explain This .h5 File in Simple Words` buttons dispatching `nisar-ask-ai` custom events with exact `.h5` metrics so `PageAwareAssistant` auto-opens, submits, and exposes a default `"Explain the .h5 satellite file in simple words"` quick chip.
+- **Everyday-Person AI Prompting (`server/routes.ts`, `src/utils/globeMath.ts`)**: Grounded `/api/gemini/assist` and deterministic fallbacks with mirror, leaf-bounce, and centimeter-ruler analogies alongside exact `SMIAN_P5` GB sizes and telemetry numbers.
+
+## [0.3.3] - 2026-11-14 — Live .h5 Plain-English Summaries & Binary Disk Slice Proof
+### Added
+- **Schema Preservation (`src/services/nisarApi.ts`, `src/data/samples/asfVertexSamples.ts`)**: Added `plainEnglishSummary` and `liveDiskSlices` (`offsetMB`, `nonZeroByteRatio`, `chunkSha256`) to `LiveLaptopGranuleRecord`, `parseLiveLaptopPayload`, and `SMIAN_P5_VERIFIED_RECORDS`.
+- **In Simple Words & Disk Slice Proof Badges (`src/components/GranuleInspector.tsx`)**: Highlighted `In Simple Words (What This .h5 File Shows)` boxes displaying `rec.plainEnglishSummary` plus HH/HV/Soil Wetness/Ground Shift plain-English translations and 3 binary disk slice proof badges (`Offset MB`, `Active Radar Fill %`, `Chunk Hash`).
+- **AI Guide `.h5` Summary Bridge (`src/components/GranuleInspector.tsx`, `src/components/PageAwareAssistant.tsx`, `src/utils/globeMath.ts`, `server/routes.ts`)**: Updated `✨ Ask AI Guide to Explain This .h5 File` buttons to dispatch `h5Summary` inside `nisar-ask-ai`, auto-opening the assistant panel and forwarding the `.h5` summary to `/api/gemini/assist`.
+
+## [0.3.4] - 2026-11-14 — History, Past Issues & Laptop Server AI Q&A
+### Added
+- **Dedicated `history_issues` Aspect & Types (`src/types/sar.ts`, `src/utils/globeMath.ts`, `src/services/nisarApi.ts`, `src/data/samples/asfVertexSamples.ts`)**: Added `'history_issues'` to `DatasetAspectId`, `HistoricalIssueEntry` interface, `recurringProblemsSummary`, and region-specific historical event timelines across Maharashtra, Northeast India, and Japan.
+- **History & Past Issues Panel (`src/components/HistoryIssuesPanel.tsx`, `src/components/RegionExplorerView.tsx`)**: Created a dedicated section displaying the `DATA SOURCE: SMIAN_P5 LAPTOP SERVER (.H5 + HISTORICAL BASELINE)` badge, live `.h5` file metadata, **Past Issues vs. Current Nov 2026 `.h5` Scan Timeline**, and an inline **Ask AI About History & Past Issues** chat with 3 quick-question chips grounded in `/api/local-h5` + historical baselines.
+- **Historical AI Grounding (`server/routes.ts`, `src/utils/globeMath.ts`)**: Enhanced `/api/gemini/assist` and `buildPageAwareAssistantFallback` to compare past flood, crop-loss, and earthquake events directly against current Nov 2026 `.h5` telemetry.
+
+## [0.4.0] - 2026-11-14 — Dark Editorial Portal, Throwable Sleeve Deck & Google-Earth 3D Globe
+### Added
+- **Six-Section Editorial Portal (`src/components/HomeLandingView.tsx`, `src/components/Footer.tsx`)**: Implemented a `240vh` scroll-bound split-shutter portal hero (`SKIP PORTAL / INTERACT WITH GLOBE` bypass included), Statement Fold (`035` outline numeral + scroll-rotating interferogram seal), 4-card physical Throwable Sleeve Deck (pointer-capture fling + `←`/`→` keyboard navigation), 6-zone Hairline Roster, Cycle 035 `.h5` Passes Table, and cropped full-width `'Syne'` wordmark footer.
+- **High-Detail 3D Satellite Earth & Dive-Zoom (`src/components/EarthGlobeCanvas.tsx`, `src/App.tsx`)**: Upgraded procedural/Blue-Marble Earth textures (`4096×2048` + `bumpMap` + water `roughnessMap` + `RoomEnvironment`), dual-layer Rayleigh atmospheric glow, composite gold-foil NISAR spacecraft, flush concentric radar target rings, zero-GC screen-projected HTML HUD badges synced with `SMIAN_P5`, and a `950ms` cubic-bezier dive-into-Earth transition with radial atmospheric cross-fade into the 2D Explorer.
+
+### Changed
+- **Palette & Typography (`index.html`, `src/index.css`, `src/components/Navbar.tsx`)**: Loaded `'Syne'`, `'Sora'`, and `'JetBrains Mono'`, applied the Dark Editorial color tokens (`#0A0C0E`, `#EDE7DC`, `#E8913C`, `#2E6B72`), and introduced the fixed `58px` translucent navigation bar (`01 PORTAL`, `02 CATALOGUE`, `03 ROSTER & PASSES`, `04 2D RADAR MAP`) while keeping all 2D Leaflet, `GranuleInspector`, `HistoryIssuesPanel`, `PageAwareAssistant`, and `/api/local-h5` flows intact.
+
+## [0.4.1] - 2026-11-14 — Matte Realistic Earth, Zero-Gap Opening Shutters & Soft Bedroom Palette
+### Changed
+- **Matte Realistic 3D Earth (`src/components/EarthGlobeCanvas.tsx`)**: Removed `RoomEnvironment` IBL glare and glossy ocean specular overrides, raised surface roughness (`0.94`, `metalness: 0.0`, `envMapIntensity: 0.0`), calibrated oblique solar/hemisphere lighting, and softened atmospheric haze so Earth renders realistically without plastic highlights.
+- **Zero-Gap Opening Shutters & Smooth 60/120fps Damping (`src/components/HomeLandingView.tsx`)**: Fixed the initial `scrollY = 0` shutter gap by positioning overlapping `50.5vw` left/right shutters flush at center and added high-resolution rAF interpolation over the existing scroll-driven shutter and rotation logic.
+- **Comfortable Typography, Palette & Rounded UI (`index.html`, `src/index.css`, `src/App.tsx`, `src/components/Navbar.tsx`, `src/components/HomeLandingView.tsx`, `src/components/RegionExplorerView.tsx`, `src/components/Footer.tsx`, `src/components/PageAwareAssistant.tsx`)**: Switched to `Plus Jakarta Sans`, `DM Sans`, and `JetBrains Mono`; applied the warm linen/taupe/slate-blue/verdigris-teal color profile (plus matching soft slate dark theme); unified branding around `Radar Rhythm.`; and smoothed boxy corners across cards, pills, tables, and controls.
+
+
