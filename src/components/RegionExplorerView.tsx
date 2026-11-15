@@ -30,6 +30,7 @@ import {
 } from '../utils/sarPhysics.ts';
 import { CloudPiercerMap } from './CloudPiercerMap.tsx';
 import { GranuleInspector } from './GranuleInspector.tsx';
+import { HistoryIssuesPanel } from './HistoryIssuesPanel.tsx';
 import { OrbitalTimeScrubber } from './OrbitalTimeScrubber.tsx';
 import { PhysicalDriverSynthesizer } from './PhysicalDriverSynthesizer.tsx';
 import { TelemetryPanel } from './TelemetryPanel.tsx';
@@ -140,6 +141,13 @@ function getPlainAspectCopy(
         summary:
           'Explains what is happening right here using real measurements.',
       };
+    case 'history_issues':
+      return {
+        shortTag: 'HISTORY & AI',
+        title: 'History & Past Issues (Laptop Server AI)',
+        summary:
+          "Explore past floods, crop losses, or earthquakes here and ask AI how your laptop's live .h5 scan compares.",
+      };
     case 'sources_hdf5':
     default:
       return {
@@ -230,7 +238,7 @@ export function RegionExplorerView({
               type="button"
               data-testid="back-to-globe-btn"
               onClick={onReturnToGlobe}
-              className="inline-flex items-center gap-2 border border-[var(--rr-border-strong)] bg-[var(--rr-surface-inverse)] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--rr-text-inverse)] hover:bg-[var(--rr-accent-solid)] hover:border-[var(--rr-accent-solid)] hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rr-accent)]"
+              className="inline-flex items-center gap-2 rounded-full border border-survey-border-strong bg-survey-basalt px-3.5 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-survey-basalt-text hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-survey-basalt"
             >
               <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
               <span>3D Earth</span>
@@ -242,7 +250,7 @@ export function RegionExplorerView({
               onClick={onRefreshAll}
               disabled={isRefreshing}
               aria-label="Refresh map and regional radar details"
-              className="inline-flex items-center gap-1.5 border border-[var(--rr-border)] bg-[var(--rr-surface)] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--rr-text)] hover:border-[var(--rr-accent)] hover:text-[var(--rr-accent)] disabled:opacity-60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rr-accent)]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rr-border)] bg-[var(--rr-surface)] px-3.5 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--rr-text)] hover:border-[var(--rr-accent)] hover:text-[var(--rr-accent)] disabled:opacity-60 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rr-accent)]"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-[var(--rr-accent)]' : ''}`}
@@ -260,14 +268,14 @@ export function RegionExplorerView({
               </span>
             )}
 
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--rr-accent)]">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--rr-accent)]">
               {region.productType === 'GUNW'
                 ? 'Ground Movement Map'
                 : 'Water & Crop Radar Map'}
             </span>
 
             {isLiveLaptopDb && (
-              <span className="inline-flex items-center gap-1.5 border border-[var(--rr-success-border)] bg-[var(--rr-success-bg)] px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--rr-success-text)]">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rr-success-border)] bg-[var(--rr-success-bg)] px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--rr-success-text)]">
                 <Database className="h-3 w-3" aria-hidden="true" />
                 <span>Live DB Connected</span>
               </span>
@@ -295,9 +303,9 @@ export function RegionExplorerView({
                   type="button"
                   onClick={() => onSelectRegion(item.id)}
                   aria-pressed={active}
-                  className={`border px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rr-accent)] ${
+                  className={`rounded-full border px-3.5 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rr-accent)] ${
                     active
-                      ? 'border-[var(--rr-accent-solid)] bg-[var(--rr-accent-solid)] text-white'
+                      ? 'border-survey-basalt bg-survey-basalt text-survey-basalt-text'
                       : 'border-[var(--rr-border)] bg-[var(--rr-surface)] text-[var(--rr-text)] hover:border-[var(--rr-border-strong)]'
                   }`}
                 >
@@ -351,10 +359,10 @@ export function RegionExplorerView({
           aria-label="Details and topic toggles"
           className="lg:col-span-5 space-y-3"
         >
-          <div className="flex items-center justify-between border border-[var(--rr-border)] bg-[var(--rr-surface)] px-4 py-3">
+          <div className="flex items-center justify-between rounded-2xl border border-[var(--rr-border)] bg-[var(--rr-surface)] px-4 py-3">
             <div className="flex items-center gap-2">
               <Layers className="h-4 w-4 text-[var(--rr-accent)]" aria-hidden="true" />
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--rr-text)]">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--rr-text)]">
                 Explore Details · Toggle Topics
               </span>
             </div>
@@ -371,7 +379,7 @@ export function RegionExplorerView({
               return (
                 <div
                   key={aspect.id}
-                  className={`border transition-colors ${
+                  className={`rounded-2xl border overflow-hidden transition-colors ${
                     isOpen
                       ? 'border-[var(--rr-border-strong)] bg-[var(--rr-bg)]'
                       : 'border-[var(--rr-border)] bg-[var(--rr-surface)] hover:border-[var(--rr-border-strong)]'
@@ -385,7 +393,7 @@ export function RegionExplorerView({
                     className="w-full px-4 py-3.5 text-left flex items-start justify-between gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rr-accent)]"
                   >
                     <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em]">
+                      <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em]">
                         <span className="text-[var(--rr-accent)]">{aspect.code}</span>
                         <span className="text-[var(--rr-muted)]">·</span>
                         <span className="text-[var(--rr-muted)]">{plain.shortTag}</span>
@@ -399,9 +407,9 @@ export function RegionExplorerView({
                     </div>
 
                     <span
-                      className={`mt-1 flex h-7 w-7 shrink-0 items-center justify-center border ${
+                      className={`mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors ${
                         isOpen
-                          ? 'border-[var(--rr-accent-solid)] bg-[var(--rr-accent-solid)] text-white'
+                          ? 'border-survey-basalt bg-survey-basalt text-survey-basalt-text'
                           : 'border-[var(--rr-border)] bg-[var(--rr-bg)] text-[var(--rr-text)]'
                       }`}
                     >
@@ -423,9 +431,9 @@ export function RegionExplorerView({
                         aspect.id === 'crustal_los' ||
                         aspect.id === 'coherence_mask') && (
                         <div className="space-y-4">
-                          <div className="border border-[var(--rr-border)] bg-[var(--rr-surface)] p-3.5 space-y-2">
+                          <div className="rounded-xl border border-[var(--rr-border)] bg-[var(--rr-surface)] p-3.5 space-y-2">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--rr-accent)]">
+                              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--rr-accent)]">
                                 Selected Area · {activePass.passCode} ({activePass.acquisitionDate})
                               </span>
                               <Compass className="h-3.5 w-3.5 text-[var(--rr-accent)]" aria-hidden="true" />
@@ -446,16 +454,17 @@ export function RegionExplorerView({
                           </div>
 
                           <div className="space-y-1.5">
-                            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--rr-muted)]">
+                            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--rr-muted)]">
                               All {region.zones.length} Zones (Tap to Focus)
                             </div>
-                            <div className="divide-y divide-[var(--rr-border)] border border-[var(--rr-border)] bg-[var(--rr-surface)]">
+                            <div className="divide-y divide-[var(--rr-border)] rounded-xl overflow-hidden border border-[var(--rr-border)] bg-[var(--rr-surface)]">
                               {region.zones.map((z) => {
                                 const p = z.passes[passIndex] ?? z.passes[0];
                                 const st = getPolygonVisualStyle(
                                   p,
                                   layerMode,
-                                  coherenceThreshold
+                                  coherenceThreshold,
+                                  isDark
                                 );
                                 const isSel = z.id === activeZone.id;
                                 return (
@@ -465,7 +474,7 @@ export function RegionExplorerView({
                                     onClick={() => onSelectZone(z.id)}
                                     className={`w-full px-3 py-2.5 text-left flex items-center justify-between gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rr-accent)] ${
                                       isSel
-                                        ? 'bg-[var(--rr-accent-solid)] text-white'
+                                        ? 'bg-survey-basalt text-survey-basalt-text'
                                         : 'hover:bg-[var(--rr-surface-2)] text-[var(--rr-text)]'
                                     }`}
                                   >
@@ -475,7 +484,7 @@ export function RegionExplorerView({
                                       </div>
                                       <div
                                         className={`text-[11px] truncate ${
-                                          isSel ? 'text-white/85' : 'text-[var(--rr-muted)]'
+                                          isSel ? 'text-survey-basalt-text/85' : 'text-[var(--rr-muted)]'
                                         }`}
                                       >
                                         {st.classificationLabel}
@@ -527,6 +536,14 @@ export function RegionExplorerView({
                           onRetryGranules={onRetryGranules}
                           eonetEvents={eonetEvents}
                           demoMode={demoMode}
+                        />
+                      )}
+
+                      {aspect.id === 'history_issues' && (
+                        <HistoryIssuesPanel
+                          region={region}
+                          selectedZone={selectedZone}
+                          passIndex={passIndex}
                         />
                       )}
                     </div>

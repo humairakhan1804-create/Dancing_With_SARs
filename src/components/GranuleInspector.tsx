@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import {
   AlertTriangle,
+  Bot,
   CheckCircle2,
   Code2,
   Cpu,
@@ -45,6 +46,124 @@ interface GranuleInspectorProps {
 
 const FALLBACK_SMIAN_P5_RECORDS: LiveLaptopGranuleRecord[] =
   SMIAN_P5_VERIFIED_RECORDS;
+
+function translateWaterSignal(hhMean?: number, hhFloodMin?: number): string {
+  const minVal = hhFloodMin ?? hhMean;
+  if (typeof minVal !== 'number') {
+    return 'Radar brightness data is stored in this grid.';
+  }
+  if (minVal <= -18.0) {
+    return `Calm Floodwater Detected (${minVal.toFixed(1)} dB low / ${(hhMean ?? minVal).toFixed(1)} dB avg): Smooth water acts like a flat mirror and bounces radar away from the satellite, showing up as dark flood zones even under 100% monsoon clouds.`;
+  }
+  return `Surface Roughness & Wetness (${minVal.toFixed(1)} dB): Rougher soil and wet ground bounce more microwave signal back to space.`;
+}
+
+function translateCropSignal(hvMean?: number, regionId?: string): string {
+  if (typeof hvMean !== 'number') {
+    return 'Plant and forest scatter measurements are stored in this grid.';
+  }
+  if (regionId === 'japan' || hvMean <= -14.0) {
+    return `Coastal Terrain & Forest Mix (${hvMean.toFixed(1)} dB): Moderate leaf and stem bounce across hillside cedar forests and coastal bedrock.`;
+  }
+  return `Healthy Crop & Forest Canopy (${hvMean.toFixed(1)} dB): Radar bounces inside leaves and stems, measuring plant density in cotton, paddy, and wetlands.`;
+}
+
+function translateSoilMoisture(soilMoistureIndex?: number): {
+  pct: number;
+  label: string;
+} | null {
+  if (typeof soilMoistureIndex !== 'number') return null;
+  const pct = Math.min(100, Math.max(0, Math.round(soilMoistureIndex * 100)));
+  if (pct >= 85) {
+    return {
+      pct,
+      label: `${pct}% Topsoil Moisture — floodplain soil is saturated; extra rain turns straight into runoff`,
+    };
+  }
+  if (pct >= 70) {
+    return {
+      pct,
+      label: `${pct}% Topsoil Moisture — soil is heavily soaked, high runoff risk if rain continues`,
+    };
+  }
+  return {
+    pct,
+    label: `${pct}% Topsoil Moisture — moderate ground dampness`,
+  };
+}
+
+function translateGroundShift(
+  losDisplacementCm?: number,
+  coherenceMean?: number
+): string | null {
+  if (typeof losDisplacementCm !== 'number') return null;
+  const direction = losDisplacementCm < 0 ? 'sank by' : 'rose by';
+  const conf =
+    typeof coherenceMean === 'number'
+      ? ` (${Math.round(coherenceMean * 100)}% measurement confidence)`
+      : '';
+  return `Ground ${direction} ${Math.abs(losDisplacementCm).toFixed(1)} cm after earthquake fault movement${conf}.`;
+}
+
+function buildH5SummaryString(rec: LiveLaptopGranuleRecord): string {
+  const sizeGb = (rec.fileSizeMB / 1000).toFixed(2);
+  const parts: string[] = [
+    `File: ${rec.fileName} (${Math.round(rec.fileSizeMB).toLocaleString('en-US')} MB / ${sizeGb} GB)`,
+    `Region: ${rec.regionName}`,
+    rec.plainEnglishSummary ? `Summary: ${rec.plainEnglishSummary}` : '',
+    typeof rec.hhGamma0MeanDb === 'number'
+      ? `Water HH avg ${rec.hhGamma0MeanDb.toFixed(1)} dB`
+      : '',
+    typeof rec.hhFloodMinDb === 'number'
+      ? `Flood low ${rec.hhFloodMinDb.toFixed(1)} dB`
+      : '',
+    typeof rec.hvGamma0MeanDb === 'number'
+      ? `Crops/Trees HV avg ${rec.hvGamma0MeanDb.toFixed(1)} dB`
+      : '',
+    typeof rec.soilMoistureIndex === 'number'
+      ? `Soil Wetness ${Math.round(rec.soilMoistureIndex * 100)}%`
+      : '',
+    typeof rec.losDisplacementCm === 'number'
+      ? `Ground Shift ${rec.losDisplacementCm.toFixed(1)} cm`
+      : '',
+    typeof rec.coherenceMean === 'number'
+      ? `Measurement Confidence ${Math.round(rec.coherenceMean * 100)}%`
+      : '',
+    rec.liveDiskSlices && rec.liveDiskSlices.length > 0
+      ? `Disk Slices: ${rec.liveDiskSlices
+          .map(
+            (s) =>
+              `@${s.offsetMB.toFixed(1)}MB ${(s.nonZeroByteRatio * 100).toFixed(1)}% [${s.chunkSha256}]`
+          )
+          .join(', ')}`
+      : '',
+  ].filter(Boolean);
+  return parts.join(' | ');
+}
+
+function askAiToExplainH5(rec: LiveLaptopGranuleRecord): void {
+  const h5Summary = buildH5SummaryString(rec);
+  window.dispatchEvent(
+    new CustomEvent('nisar-ask-ai', {
+      detail: {
+        question: `Explain this .h5 satellite file (${rec.fileName}) for ${rec.regionName} in simple, everyday words`,
+        h5Summary,
+        h5Context: {
+          fileName: rec.fileName,
+          fileSizeMB: rec.fileSizeMB,
+          regionName: rec.regionName,
+          hhGamma0MeanDb: rec.hhGamma0MeanDb,
+          hhFloodMinDb: rec.hhFloodMinDb,
+          hvGamma0MeanDb: rec.hvGamma0MeanDb,
+          soilMoistureIndex: rec.soilMoistureIndex,
+          losDisplacementCm: rec.losDisplacementCm,
+          coherenceMean: rec.coherenceMean,
+          headerDigest: rec.headerDigest,
+        },
+      },
+    })
+  );
+}
 
 export function GranuleInspector({
   region,
@@ -142,7 +261,7 @@ export function GranuleInspector({
           <button
             type="button"
             onClick={onRetryGranules}
-            className="inline-flex items-center gap-1 border border-[var(--rr-border-strong)] bg-[var(--rr-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--rr-text)] hover:bg-[var(--rr-accent-solid)] hover:text-white"
+            className="inline-flex items-center gap-1 border border-[var(--rr-border-strong)] bg-[var(--rr-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--rr-text)] hover:bg-[var(--rr-accent-solid)] hover:text-survey-basalt-text"
           >
             <RefreshCw className="h-3 w-3" aria-hidden="true" />
             <span>Retry</span>
@@ -169,7 +288,11 @@ export function GranuleInspector({
                 : 'border-[var(--rr-warn-border)] bg-[var(--rr-warn-bg)] text-[var(--rr-warn-text)]'
             }`}
           >
-            <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+            {laptopProbe?.connected ? (
+              <CheckCircle2 className="h-3 w-3 shrink-0" aria-hidden="true" />
+            ) : (
+              <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
+            )}
             <span>
               {isLoadingHardware
                 ? 'CHECKING...'
@@ -180,14 +303,25 @@ export function GranuleInspector({
           </span>
         </div>
 
-        <div className="space-y-2">
+        <div className="border border-[var(--rr-border)] bg-[var(--rr-bg)] p-2.5 text-[11px] leading-relaxed text-[var(--rr-muted)]">
+          <span className="font-bold text-[var(--rr-text)]">What is a .h5 file? </span>
+          An <code className="font-mono text-[var(--rr-accent)]">.h5</code> (Hierarchical Data Format) file is NASA&apos;s scientific container that stores millions of radar echoes beamed through clouds at 24 cm microwave wavelength—acting like an X-ray of Earth&apos;s surface day or night.
+        </div>
+
+        <div className="space-y-3">
           {hardwareRecords.map((rec) => {
             const isActiveRegion = normalizeRegionMatch(rec.regionId, region.id);
             const sizeFormatted = `${Math.round(rec.fileSizeMB).toLocaleString('en-US')} MB`;
+            const moisture = translateSoilMoisture(rec.soilMoistureIndex);
+            const groundShiftText = translateGroundShift(
+              rec.losDisplacementCm,
+              rec.coherenceMean
+            );
+
             return (
               <div
                 key={rec.headerDigest + rec.fileName}
-                className={`border p-2.5 space-y-1.5 ${
+                className={`border p-3 space-y-2.5 ${
                   isActiveRegion
                     ? 'border-[var(--rr-accent)] bg-[var(--rr-bg)]'
                     : 'border-[var(--rr-border)] bg-[var(--rr-bg)]/70'
@@ -205,13 +339,13 @@ export function GranuleInspector({
                       {rec.regionName}
                     </span>
                     {isActiveRegion && (
-                      <span className="font-mono text-[9px] font-bold uppercase px-1.5 py-0.5 bg-[var(--rr-accent-solid)] text-white">
+                      <span className="font-mono text-[9px] font-bold uppercase px-1.5 py-0.5 bg-survey-basalt text-survey-basalt-text">
                         Active
                       </span>
                     )}
                   </div>
                   <span className="font-mono text-xs font-bold text-[var(--rr-text)] tabular-nums">
-                    {sizeFormatted}
+                    {sizeFormatted} ({(rec.fileSizeMB / 1000).toFixed(2)} GB)
                   </span>
                 </div>
 
@@ -240,7 +374,8 @@ export function GranuleInspector({
                     <span>HH Mean: {rec.hhGamma0MeanDb.toFixed(1)} dB</span>
                   )}
                   {typeof rec.hhFloodMinDb === 'number' && (
-                    <span className="text-[var(--rr-accent)]">
+                    <span className="inline-flex items-center gap-1.5 text-survey-ink font-semibold">
+                      <span className="h-2 w-2 bg-data-water inline-block" aria-hidden="true" />
                       HH Flood Min: {rec.hhFloodMinDb.toFixed(1)} dB
                     </span>
                   )}
@@ -251,7 +386,8 @@ export function GranuleInspector({
                     <span>Soil Moisture: {rec.soilMoistureIndex.toFixed(2)}</span>
                   )}
                   {typeof rec.losDisplacementCm === 'number' && (
-                    <span className="text-[#F97316]">
+                    <span className="inline-flex items-center gap-1.5 text-survey-ink font-semibold">
+                      <span className="h-2 w-2 bg-data-hh inline-block" aria-hidden="true" />
                       LOS Shift: {rec.losDisplacementCm.toFixed(1)} cm
                     </span>
                   )}
@@ -259,6 +395,127 @@ export function GranuleInspector({
                     <span>Coherence γ: {rec.coherenceMean.toFixed(2)}</span>
                   )}
                 </div>
+
+                {/* Highlighted Plain-English Summary & Translations */}
+                <div
+                  data-testid={`h5-translator-${rec.regionId}`}
+                  className="border border-survey-border-strong bg-survey-surface p-3 space-y-2 text-[11px]"
+                >
+                  <div className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-survey-ink">
+                    In Simple Words (What This .h5 File Shows)
+                  </div>
+
+                  {rec.plainEnglishSummary && (
+                    <p
+                      data-testid={`h5-plain-summary-${rec.regionId}`}
+                      className="border border-survey-border bg-survey-bg px-3 py-2 text-xs font-medium leading-relaxed text-survey-ink"
+                    >
+                      {rec.plainEnglishSummary}
+                    </p>
+                  )}
+
+                  <p className="text-[var(--rr-muted)] leading-snug">
+                    <strong className="text-[var(--rr-text)]">Water &amp; Floods (HH): </strong>
+                    {translateWaterSignal(rec.hhGamma0MeanDb, rec.hhFloodMinDb)}
+                  </p>
+
+                  <p className="text-[var(--rr-muted)] leading-snug">
+                    <strong className="text-[var(--rr-text)]">Crops &amp; Trees (HV): </strong>
+                    {translateCropSignal(rec.hvGamma0MeanDb, rec.regionId)}
+                  </p>
+
+                  {moisture && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="font-bold text-[var(--rr-text)]">Soil Wetness</span>
+                        <span className="font-mono font-bold text-survey-ink tabular-nums">
+                          {moisture.pct}%
+                        </span>
+                      </div>
+                      <div className="h-2 w-full border border-survey-border bg-survey-bg overflow-hidden">
+                        <div
+                          className="h-full bg-data-water transition-all"
+                          style={{ width: `${moisture.pct}%` }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-[var(--rr-muted)]">{moisture.label}</p>
+                    </div>
+                  )}
+
+                  {groundShiftText && (
+                    <p className="text-survey-muted leading-snug">
+                      <strong className="inline-flex items-center gap-1.5 text-survey-ink">
+                        <span className="h-2 w-2 bg-data-hh inline-block" aria-hidden="true" />
+                        Ground Shift (cm):{' '}
+                      </strong>
+                      {groundShiftText}
+                    </p>
+                  )}
+
+                  <ul className="space-y-0.5 border-t border-[var(--rr-border)] pt-1.5 text-[10px] text-[var(--rr-muted)]">
+                    <li>
+                      <code className="font-mono text-[var(--rr-text)]">HHHH</code> →{' '}
+                      <strong className="text-[var(--rr-text)]">Water &amp; Surface Roughness Grid</strong>
+                    </li>
+                    <li>
+                      <code className="font-mono text-[var(--rr-text)]">HVHV</code> →{' '}
+                      <strong className="text-[var(--rr-text)]">Crop &amp; Tree Volume Grid</strong>
+                    </li>
+                    <li>
+                      <code className="font-mono text-[var(--rr-text)]">boundingPolygon</code> →{' '}
+                      <strong className="text-[var(--rr-text)]">GPS Map Outline</strong>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Live Binary Disk Slice Proof Badges */}
+                {rec.liveDiskSlices && rec.liveDiskSlices.length > 0 && (
+                  <div
+                    data-testid={`disk-slices-${rec.regionId}`}
+                    className="space-y-1.5 border border-[var(--rr-border)] bg-[var(--rr-surface-2)] p-2.5"
+                  >
+                    <div className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--rr-success-text)]">
+                      Live Disk Read Proof ({rec.liveDiskSlices.length} Binary Slices)
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                      {rec.liveDiskSlices.slice(0, 3).map((slice) => (
+                        <div
+                          key={`${rec.regionId}-${slice.offsetMB}-${slice.chunkSha256}`}
+                          className="border border-[var(--rr-border)] bg-[var(--rr-bg)] px-2 py-1.5 font-mono text-[10px] tabular-nums space-y-0.5"
+                        >
+                          <div className="text-[var(--rr-muted)]">
+                            Offset MB:{' '}
+                            <strong className="text-[var(--rr-text)]">
+                              {slice.offsetMB.toFixed(1)} MB
+                            </strong>
+                          </div>
+                          <div className="text-[var(--rr-muted)]">
+                            Active Radar Fill:{' '}
+                            <strong className="text-[var(--rr-accent)]">
+                              {(slice.nonZeroByteRatio * 100).toFixed(1)}%
+                            </strong>
+                          </div>
+                          <div className="text-[var(--rr-muted)] truncate" title={slice.chunkSha256}>
+                            Chunk Hash:{' '}
+                            <strong className="text-[var(--rr-success-text)]">
+                              {slice.chunkSha256}
+                            </strong>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  data-testid={`ask-ai-h5-${rec.regionId}`}
+                  onClick={() => askAiToExplainH5(rec)}
+                  className="w-full inline-flex items-center justify-center gap-2 border border-survey-basalt bg-survey-surface px-3 py-2 text-xs font-bold text-survey-ink hover:bg-survey-basalt hover:text-survey-basalt-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-survey-basalt"
+                >
+                  <Bot className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>Ask AI Guide to Explain This .h5 File</span>
+                </button>
               </div>
             );
           })}
@@ -288,35 +545,143 @@ export function GranuleInspector({
       </div>
 
       {/* Primary .h5 Granule Info */}
-      <div className="border border-[var(--rr-accent)] bg-[var(--rr-bg)] p-3.5 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--rr-text)]">
-            Primary Radar File (.h5)
-          </span>
-          <span className="font-mono text-[10px] font-bold px-2 py-0.5 border border-[var(--rr-accent-solid)] bg-[var(--rr-accent-solid)] text-white">
-            Cycle {String(hdf5Manifest.cycle).padStart(3, '0')} · {hdf5Manifest.crid}
-          </span>
-        </div>
-        <div className="font-mono text-[11px] font-bold text-[var(--rr-accent)] break-all">
-          {hdf5Manifest.filename}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 font-mono text-[11px] text-[var(--rr-text)] tabular-nums">
-          <div>Track: {String(hdf5Manifest.track).padStart(3, '0')}</div>
-          <div>Frame: {String(hdf5Manifest.frame).padStart(3, '0')}</div>
-          <div>Orbit: {hdf5Manifest.orbitDirection}</div>
-          <div>BW: {hdf5Manifest.bandwidth}</div>
-          <div>Pol: {hdf5Manifest.polarizationMode}</div>
-          <div className="truncate" title={hdf5Manifest.acquisitionUtc}>
-            UTC: {hdf5Manifest.acquisitionUtc}
+      {(() => {
+        const activeHardwareRec =
+          hardwareRecords.find((r) => normalizeRegionMatch(r.regionId, region.id)) ??
+          hardwareRecords[0];
+        const primaryMoisture = translateSoilMoisture(
+          activeHardwareRec?.soilMoistureIndex
+        );
+        const primaryShift = translateGroundShift(
+          activeHardwareRec?.losDisplacementCm,
+          activeHardwareRec?.coherenceMean
+        );
+
+        return (
+          <div className="border border-[var(--rr-accent)] bg-[var(--rr-bg)] p-3.5 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--rr-text)]">
+                Primary Radar File (.h5)
+              </span>
+              <span className="font-mono text-[10px] font-bold px-2 py-0.5 border border-survey-basalt bg-survey-basalt text-survey-basalt-text">
+                Cycle {String(hdf5Manifest.cycle).padStart(3, '0')} · {hdf5Manifest.crid}
+              </span>
+            </div>
+
+            <div className="font-mono text-[11px] font-bold text-[var(--rr-accent)] break-all">
+              {hdf5Manifest.filename}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 font-mono text-[11px] text-[var(--rr-text)] tabular-nums">
+              <div>Track: {String(hdf5Manifest.track).padStart(3, '0')}</div>
+              <div>Frame: {String(hdf5Manifest.frame).padStart(3, '0')}</div>
+              <div>Orbit: {hdf5Manifest.orbitDirection}</div>
+              <div>BW: {hdf5Manifest.bandwidth}</div>
+              <div>Pol: {hdf5Manifest.polarizationMode}</div>
+              <div className="truncate" title={hdf5Manifest.acquisitionUtc}>
+                UTC: {hdf5Manifest.acquisitionUtc}
+              </div>
+            </div>
+
+            {/* Plain-English Primary .h5 Translator + Path Decoder */}
+            <div
+              data-testid="primary-h5-plain-english"
+              className="border border-[var(--rr-border)] bg-[var(--rr-surface)] p-3 space-y-2 text-[11px]"
+            >
+              <div className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--rr-accent)]">
+                What This .h5 File Means in Plain English
+              </div>
+              <p className="text-[var(--rr-muted)] leading-relaxed">
+                <strong className="text-[var(--rr-text)]">What is a .h5 file? </strong>
+                An .h5 (Hierarchical Data Format) file is NASA&apos;s scientific container that stores millions of radar echoes beamed through clouds at 24 cm microwave wavelength—acting like an X-ray of Earth&apos;s surface day or night.
+              </p>
+
+              {activeHardwareRec && (
+                <div className="space-y-1.5 border-t border-[var(--rr-border)] pt-2">
+                  <p className="text-[var(--rr-muted)] leading-snug">
+                    <strong className="text-[var(--rr-text)]">Water &amp; Flood Signal (HH): </strong>
+                    {translateWaterSignal(
+                      activeHardwareRec.hhGamma0MeanDb,
+                      activeHardwareRec.hhFloodMinDb
+                    )}
+                  </p>
+                  <p className="text-[var(--rr-muted)] leading-snug">
+                    <strong className="text-[var(--rr-text)]">Crop &amp; Forest Thickness (HV): </strong>
+                    {translateCropSignal(
+                      activeHardwareRec.hvGamma0MeanDb,
+                      activeHardwareRec.regionId
+                    )}
+                  </p>
+                  {primaryMoisture && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-[var(--rr-text)]">Soil Wetness</span>
+                        <span className="font-mono font-bold text-[var(--rr-accent)]">
+                          {primaryMoisture.pct}%
+                        </span>
+                      </div>
+                      <div className="h-2 w-full border border-survey-border bg-survey-bg overflow-hidden">
+                        <div
+                          className="h-full bg-data-water"
+                          style={{ width: `${primaryMoisture.pct}%` }}
+                        />
+                      </div>
+                      <p className="text-survey-muted">{primaryMoisture.label}</p>
+                    </div>
+                  )}
+                  {primaryShift && (
+                    <p className="text-survey-muted leading-snug">
+                      <strong className="inline-flex items-center gap-1.5 text-survey-ink">
+                        <span className="h-2 w-2 bg-data-hh inline-block" aria-hidden="true" />
+                        Ground Shift:{' '}
+                      </strong>
+                      {primaryShift}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="border-t border-[var(--rr-border)] pt-2 space-y-1">
+                <div className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--rr-text)]">
+                  Filename &amp; HDF5 Path Decoder
+                </div>
+                <ul className="space-y-1 text-[11px] text-[var(--rr-muted)]">
+                  <li className="break-all">
+                    <code className="font-mono text-[10px] text-[var(--rr-accent)]">
+                      {hdf5Manifest.paths.hhhh}
+                    </code>{' '}
+                    → <strong className="text-[var(--rr-text)]">Water &amp; Surface Roughness Grid</strong> (spots smooth floodwater vs rough ground)
+                  </li>
+                  <li className="break-all">
+                    <code className="font-mono text-[10px] text-[var(--rr-accent)]">
+                      {hdf5Manifest.paths.hvhv}
+                    </code>{' '}
+                    → <strong className="text-[var(--rr-text)]">Crop &amp; Tree Volume Grid</strong> (measures leaves, stems, and forest density)
+                  </li>
+                  <li className="break-all">
+                    <code className="font-mono text-[10px] text-[var(--rr-accent)]">
+                      {hdf5Manifest.paths.boundingPolygon}
+                    </code>{' '}
+                    → <strong className="text-[var(--rr-text)]">GPS Map Outline</strong> (places this satellite strip cleanly onto the 2D map)
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {activeHardwareRec && (
+              <button
+                type="button"
+                data-testid="ask-ai-primary-h5-btn"
+                onClick={() => askAiToExplainH5(activeHardwareRec)}
+                className="w-full inline-flex items-center justify-center gap-2 border border-survey-basalt bg-survey-basalt px-3 py-2 text-xs font-bold text-survey-basalt-text hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-survey-basalt"
+              >
+                <Bot className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>Ask AI Guide to Explain This .h5 File</span>
+              </button>
+            )}
           </div>
-        </div>
-        <div className="border border-[var(--rr-border)] bg-[var(--rr-surface)] p-2.5 font-mono text-[10px] text-[var(--rr-muted)] space-y-1">
-          <div className="text-[var(--rr-text)] font-bold uppercase">HDF5 Data Paths</div>
-          <div className="break-all">HH: {hdf5Manifest.paths.hhhh}</div>
-          <div className="break-all">HV: {hdf5Manifest.paths.hvhv}</div>
-          <div className="break-all">Bounds: {hdf5Manifest.paths.boundingPolygon}</div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Custom GeoJSON / JSON Upload */}
       <div className="border border-dashed border-[var(--rr-border-strong)] bg-[var(--rr-surface)] p-3.5">
@@ -329,7 +694,7 @@ export function GranuleInspector({
               Load custom radar scene files right inside your browser.
             </p>
           </div>
-          <label className="inline-flex cursor-pointer items-center gap-1.5 border border-[var(--rr-border-strong)] bg-[var(--rr-surface-inverse)] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--rr-text-inverse)] hover:bg-[var(--rr-accent-solid)] hover:border-[var(--rr-accent-solid)] hover:text-white focus-within:ring-2 focus-within:ring-[var(--rr-accent)]">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 border border-survey-border-strong bg-survey-basalt px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-survey-basalt-text hover:opacity-90 focus-within:ring-2 focus-within:ring-survey-basalt">
             <FileUp className="h-3.5 w-3.5" aria-hidden="true" />
             <span>Upload JSON</span>
             <input
@@ -439,7 +804,7 @@ export function GranuleInspector({
                 </div>
 
                 {isExpanded && (
-                  <pre className="mt-2 max-h-48 overflow-auto border border-[var(--rr-border)] bg-black p-2.5 font-mono text-[11px] text-[#FAFAFA]">
+                  <pre className="mt-2 max-h-48 overflow-auto border border-survey-border bg-[var(--rr-space-bg)] p-2.5 font-mono text-[11px] text-[var(--rr-space-text)]">
                     {JSON.stringify(g, null, 2)}
                   </pre>
                 )}
