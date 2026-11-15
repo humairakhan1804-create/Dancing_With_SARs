@@ -1,4 +1,8 @@
-import type { RegionDataset, RegionId } from '../../types/sar.ts';
+import type {
+  HistoricalIssueEntry,
+  RegionDataset,
+  RegionId,
+} from '../../types/sar.ts';
 
 export interface Hdf5DatasetPaths {
   hhhh: string;
@@ -86,6 +90,12 @@ export interface SmianP5ParsedGranuleHeader {
   crid: string;
 }
 
+export interface LiveDiskSlice {
+  offsetMB: number;
+  nonZeroByteRatio: number;
+  chunkSha256: string;
+}
+
 export interface SmianP5VerifiedRecord {
   fileName: string;
   fileSizeMB: number;
@@ -102,6 +112,10 @@ export interface SmianP5VerifiedRecord {
   soilMoistureIndex?: number;
   losDisplacementCm?: number;
   coherenceMean?: number;
+  plainEnglishSummary?: string;
+  liveDiskSlices?: LiveDiskSlice[];
+  recurringProblemsSummary?: string;
+  historicalIssues?: HistoricalIssueEntry[];
 }
 
 export const SMIAN_P5_VERIFIED_HOST = 'SMIAN_P5';
@@ -140,6 +154,37 @@ export const SMIAN_P5_VERIFIED_RECORDS: SmianP5VerifiedRecord[] = [
     hvGamma0MeanDb: -14.9,
     losDisplacementCm: -18.6,
     coherenceMean: 0.81,
+    plainEnglishSummary:
+      "This 5.1 GB radar scan covers Japan's fault zone. By comparing radar waves before and after ground movement, it measures that the land shifted by up to 18.6 centimeters with 81% measurement reliability, helping engineers find cracked roads, ports, and landslide slopes.",
+    liveDiskSlices: [
+      { offsetMB: 0.0, nonZeroByteRatio: 0.083, chunkSha256: 'bb0e31bf13ad' },
+      { offsetMB: 2566.0, nonZeroByteRatio: 0.996, chunkSha256: '00b9a0adc2a7' },
+      { offsetMB: 3849.0, nonZeroByteRatio: 0.998, chunkSha256: '9997272442d8' },
+    ],
+    recurringProblemsSummary:
+      'Repeated fault-zone ground uplift, post-quake coastal subsidence, liquefied port roads, and rain-triggered hillside landslides across the Noto Peninsula & Toyama Bay.',
+    historicalIssues: [
+      {
+        year: '2024 (Jan 1)',
+        eventTitle: 'Mw 7.5 Noto Peninsula Earthquake — Wajima Uplift & Suzu Fault Rupture',
+        whatHappened:
+          'A powerful New Year’s Day earthquake thrust the Wajima coastline upward by meters, cracked highways, and damaged fishing harbors across northern Ishikawa Prefecture.',
+        radarSignatureComparison:
+          'Unlike intact pre-quake rock, the Nov 5, 2026 .h5 scan records up to -18.6 cm of Line-of-Sight ground movement with 81% measurement reliability (γ = 0.81), pinpointing where fault blocks are still settling.',
+        communityImpact:
+          'Helps local engineers prioritize seawall repairs, port dredging, and safe road rebuilding routes.',
+      },
+      {
+        year: '2024 (Jan–Sep)',
+        eventTitle: 'Nanao Bay Liquefaction & Heavy-Rain Slope Instability',
+        whatHappened:
+          'Earthquake shaking liquefied sandy coastal reclaimed land around Nanao Bay, and follow-on seasonal storms triggered debris flows on fractured hillsides.',
+        radarSignatureComparison:
+          'The current .h5 file measures calm coastal water mirror bounce at -18.2 dB (HH mean -11.6 dB) and forest/slope scatter at -14.9 dB (HV), highlighting wet shoreline zones next to steep terrain.',
+        communityImpact:
+          'Supports hazard zoning for coastal neighborhoods, rail lines, and emergency evacuation corridors.',
+      },
+    ],
   },
   {
     fileName:
@@ -173,6 +218,37 @@ export const SMIAN_P5_VERIFIED_RECORDS: SmianP5VerifiedRecord[] = [
     hhFloodMinDb: -21.4,
     hvGamma0MeanDb: -12.1,
     soilMoistureIndex: 0.78,
+    plainEnglishSummary:
+      'This 6.4 GB radar scan covers central Maharashtra (Gosikhurd Dam & Wardha cotton farms). It sees through monsoon clouds to show that topsoil is 78% soaked and low-lying riverbanks have calm standing floodwater (-21.4 dB mirror reflection), while cotton and paddy fields show strong plant canopy growth (-12.1 dB).',
+    liveDiskSlices: [
+      { offsetMB: 0.0, nonZeroByteRatio: 0.083, chunkSha256: 'd643b43bc5a8' },
+      { offsetMB: 3194.0, nonZeroByteRatio: 0.993, chunkSha256: 'cee572645942' },
+      { offsetMB: 4791.0, nonZeroByteRatio: 0.991, chunkSha256: 'da0254107e14' },
+    ],
+    recurringProblemsSummary:
+      'Recurring monsoon spillway releases along the Wainganga River below Gosikhurd Dam, combined with Vidarbha unseasonal rains that waterlog Bt cotton and paddy fields.',
+    historicalIssues: [
+      {
+        year: '2019 & 2022 (Monsoon)',
+        eventTitle: 'Wainganga & Gosikhurd Spillway Floods (Bhandara–Chandrapur)',
+        whatHappened:
+          'Heavy Vidarbha downpours forced emergency Gosikhurd Dam gate openings, flooding low-lying riverbank villages and submerged paddy terraces while clouds blocked regular camera satellites for weeks.',
+        radarSignatureComparison:
+          'Just like the 2019/2022 flood corridors, the Nov 11, 2026 .h5 scan catches -21.4 dB calm mirror floodwater (HH mean -14.2 dB) directly through dense cloud cover.',
+        communityImpact:
+          'Enables early warnings for downstream Bhandara and Pauni farmers before floodwaters crest over embankments.',
+      },
+      {
+        year: '2023–2025',
+        eventTitle: 'Wardha & Vidarbha Unseasonal Rain, Bt Cotton Root-Rot & Waterlogging',
+        whatHappened:
+          'Late-season rainstorms soaked heavy black cotton soils, stressing standing Bt cotton bolls and triggering fungal root rot when drainage stalled.',
+        radarSignatureComparison:
+          'The current Nov 11, 2026 .h5 scan records 78% topsoil wetness alongside dense HV crop bounce (-12.1 dB)—signaling healthy but heavily waterlogged root zones if rain resumes.',
+        communityImpact:
+          'Guides agricultural officers on field drainage, crop insurance verification, and pest prevention.',
+      },
+    ],
   },
   {
     fileName:
@@ -206,6 +282,37 @@ export const SMIAN_P5_VERIFIED_RECORDS: SmianP5VerifiedRecord[] = [
     hhFloodMinDb: -23.0,
     hvGamma0MeanDb: -11.4,
     soilMoistureIndex: 0.89,
+    plainEnglishSummary:
+      "This 6.5 GB radar scan covers Assam's Brahmaputra River and Kaziranga wetlands during heavy cloud cover. Where normal camera satellites only see white clouds, this file detects wide flood inundation (-23.0 dB) and 89% soil saturation, helping disaster teams spot flooded villages and wildlife corridors.",
+    liveDiskSlices: [
+      { offsetMB: 0.0, nonZeroByteRatio: 0.083, chunkSha256: '0281f0a8bbfa' },
+      { offsetMB: 3258.0, nonZeroByteRatio: 0.996, chunkSha256: 'cf4bcc9189bd' },
+      { offsetMB: 4887.0, nonZeroByteRatio: 0.998, chunkSha256: '91eecd26379e' },
+    ],
+    recurringProblemsSummary:
+      'Annual Brahmaputra monsoon floods submerging over 70% of Kaziranga wetland corridors beneath persistent cloud cover, alongside chronic Majuli river-island bank erosion.',
+    historicalIssues: [
+      {
+        year: '2020, 2022 & 2024',
+        eventTitle: 'Brahmaputra & Kaziranga Monsoon Submergence Under Thick Clouds',
+        whatHappened:
+          'Multiple waves of Brahmaputra flooding submerged 70%+ of Kaziranga National Park grasslands and cut off riverside Assam villages while thick monsoon clouds blinded optical satellites.',
+        radarSignatureComparison:
+          'Matching the severity of past peak waves, the Nov 11, 2026 .h5 scan pierces total cloud cover to detect -23.0 dB open floodwater (HH mean -16.8 dB) and 89% saturated ground.',
+        communityImpact:
+          'Helps Assam disaster teams locate marooned villages, wildlife highland refuges, and flooded highway segments.',
+      },
+      {
+        year: '2018–2025',
+        eventTitle: 'Majuli Bank Erosion & Flooded Paddy-Wetland Corridors',
+        whatHappened:
+          'Fast-moving monsoon currents eroded Majuli riverbanks and trapped standing water underneath tall elephant grass and winter paddy.',
+        radarSignatureComparison:
+          'The current .h5 file shows strong HV bounce (-11.4 dB) where radar bounces off water onto tall plant stems, flagging submerged wetlands that look dry on surface-only maps.',
+        communityImpact:
+          'Supports river embankment protection and relief boat routing across Assam river islands.',
+      },
+    ],
   },
 ];
 
